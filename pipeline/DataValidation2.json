@@ -1,0 +1,62 @@
+{
+	"name": "DataValidation2",
+	"properties": {
+		"activities": [
+			{
+				"name": "Data flow1",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "DataFlowValidation",
+						"type": "DataFlowReference",
+						"parameters": {
+							"Condition_1": {
+								"value": "@pipeline().parameters.Condition1",
+								"type": "Expression"
+							},
+							"Source_Name": {
+								"value": "'@{pipeline().parameters.FileName}'",
+								"type": "Expression"
+							},
+							"variables_1": {
+								"value": "'@{pipeline().parameters.Variable1}'",
+								"type": "Expression"
+							}
+						}
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine"
+				}
+			}
+		],
+		"parameters": {
+			"Condition1": {
+				"type": "string",
+				"defaultValue": "AU-2015-1"
+			},
+			"FileName": {
+				"type": "string",
+				"defaultValue": "Sales"
+			},
+			"Variable1": {
+				"type": "string",
+				"defaultValue": "Order ID"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-01-30T15:03:22Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

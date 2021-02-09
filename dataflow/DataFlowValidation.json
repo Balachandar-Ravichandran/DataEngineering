@@ -1,0 +1,39 @@
+{
+	"name": "DataFlowValidation",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "LandingData",
+						"type": "DatasetReference"
+					},
+					"name": "DataValid"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ValidSink",
+						"type": "DatasetReference"
+					},
+					"name": "ValidSink"
+				},
+				{
+					"dataset": {
+						"referenceName": "InvalidSink2",
+						"type": "DatasetReference"
+					},
+					"name": "InValidSink"
+				}
+			],
+			"transformations": [
+				{
+					"name": "ConditionalSplit1"
+				}
+			],
+			"script": "parameters{\n\tCondition_1 as boolean,\n\tSource_Name as string,\n\tvariables_1 as string\n}\nsource(output(\n\t\t{Order ID} as string,\n\t\t{Order Date} as string,\n\t\t{Ship Date} as string,\n\t\tAging as integer,\n\t\t{Ship Mode} as string,\n\t\t{Product Category} as string,\n\t\tProduct as string,\n\t\t{ Sales } as string,\n\t\tQuantity as string,\n\t\tDiscount as string,\n\t\t{ Profit } as string,\n\t\t{ Shipping Cost } as string,\n\t\t{Order Priority} as string,\n\t\t{Customer ID} as string,\n\t\t{Customer Name} as string,\n\t\tSegment as string,\n\t\tCity as string,\n\t\tState as string,\n\t\tCountry as string,\n\t\tRegion as string,\n\t\tMonths as string,\n\t\t{Number of Shipping Days} as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\twildcardPaths:[(add('00landing/Sales/',add($Source_Name,'.csv')))]) ~> DataValid\nDataValid split(isNull({Order ID}) == $Condition_1,\n\tdisjoint: false) ~> ConditionalSplit1@(ValidDataStream, InValidDataStream)\nConditionalSplit1@ValidDataStream sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[(add($Source_Name,'.csv'))],\n\tpartitionBy('hash', 1),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> ValidSink\nConditionalSplit1@InValidDataStream sink(input(\n\t\tProp_0 as string,\n\t\tProp_1 as string,\n\t\tProp_2 as string,\n\t\tProp_3 as string,\n\t\tProp_4 as string,\n\t\tProp_5 as string,\n\t\tProp_6 as string,\n\t\tProp_7 as string,\n\t\tProp_8 as string,\n\t\tProp_9 as string,\n\t\tProp_10 as string,\n\t\tProp_11 as string,\n\t\tProp_12 as string,\n\t\tProp_13 as string,\n\t\tProp_14 as string,\n\t\tProp_15 as string,\n\t\tProp_16 as string,\n\t\tProp_17 as string,\n\t\tProp_18 as string,\n\t\tProp_19 as string,\n\t\tProp_20 as string,\n\t\tProp_21 as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[(add(add($Source_Name,'_DataInvalid'),'.csv'))],\n\tpartitionBy('hash', 1),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> InValidSink"
+		}
+	}
+}
