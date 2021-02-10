@@ -1,0 +1,12 @@
+{
+	"name": "LS_Azure_Key",
+	"properties": {
+		"annotations": [
+			"LS_Annotation"
+		],
+		"type": "AzureKeyVault",
+		"typeProperties": {
+			"baseUrl": "https://depockv.vault.azure.net/"
+		}
+	}
+}
