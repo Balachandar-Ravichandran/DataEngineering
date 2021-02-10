@@ -1,0 +1,820 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "adfdepoc"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/FileCountValidation')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Set file name",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Flag file Count",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "FileName",
+							"value": {
+								"value": "@Concat(pipeline().parameters.FileName,'.csv')",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Until1",
+						"type": "Until",
+						"dependsOn": [
+							{
+								"activity": "Set file name",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@less(int(variables('Count Index')),int(variables('Iteration Index')))",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "Lookup1",
+									"type": "Lookup",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "DelimitedTextSource",
+											"storeSettings": {
+												"type": "AzureBlobFSReadSettings",
+												"recursive": true,
+												"wildcardFileName": {
+													"value": "@variables('FileName')",
+													"type": "Expression"
+												},
+												"enablePartitionDiscovery": false
+											},
+											"formatSettings": {
+												"type": "DelimitedTextReadSettings",
+												"skipLineCount": {
+													"value": "@int(variables('Count Index'))",
+													"type": "Expression"
+												}
+											}
+										},
+										"dataset": {
+											"referenceName": "LandingInputfiles",
+											"type": "DatasetReference"
+										},
+										"firstRowOnly": false
+									}
+								},
+								{
+									"name": "filecount",
+									"type": "SetVariable",
+									"dependsOn": [
+										{
+											"activity": "Lookup1",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "FileCount",
+										"value": {
+											"value": "@string(add(int(variables('Count Index')),int(activity('Lookup1').output.count)))",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "countindex",
+									"type": "SetVariable",
+									"dependsOn": [
+										{
+											"activity": "filecount",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "Count Index",
+										"value": {
+											"value": "@string(int(variables('FileCount')))",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "iteration",
+									"type": "SetVariable",
+									"dependsOn": [
+										{
+											"activity": "countindex",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "Iteration",
+										"value": {
+											"value": "@string(add(int(variables('Iteration Index')),5000))",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "IterationIndex",
+									"type": "SetVariable",
+									"dependsOn": [
+										{
+											"activity": "iteration",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "Iteration Index",
+										"value": {
+											"value": "@variables('Iteration')",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"timeout": "7.00:00:00"
+						}
+					},
+					{
+						"name": "File Count",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Until1",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "finalcount",
+							"value": {
+								"value": "@variables('Count Index')",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Copy Flag file",
+						"description": "Copy Flag to SQL",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": true,
+									"wildcardFolderPath": "00landing/Sales",
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "SqlServerSink"
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": false,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "DF_Inputfile_flag",
+								"type": "DatasetReference"
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "SqlServerTable1",
+								"type": "DatasetReference"
+							}
+						]
+					},
+					{
+						"name": "Flag file Count",
+						"description": "Get value from Flag file",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "Copy Flag file",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlServerSource",
+								"sqlReaderQuery": {
+									"value": "@Concat('select  RowC from dbo.FileCount where TableName =''', pipeline().parameters.FileName,'''')",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "SqlServerTable1",
+								"type": "DatasetReference"
+							}
+						}
+					},
+					{
+						"name": "validate Count",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "File Count",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@equals(int(variables('finalcount')),int(activity('Flag file Count').output.firstRow.RowC))",
+								"type": "Expression"
+							},
+							"ifFalseActivities": [
+								{
+									"name": "Copy to invalid",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "DelimitedTextSource",
+											"storeSettings": {
+												"type": "AzureBlobFSReadSettings",
+												"recursive": true,
+												"wildcardFileName": {
+													"value": "@Concat(pipeline().parameters.FileName,'.csv')",
+													"type": "Expression"
+												},
+												"enablePartitionDiscovery": false
+											},
+											"formatSettings": {
+												"type": "DelimitedTextReadSettings"
+											}
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".csv"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "LandingInputfiles",
+											"type": "DatasetReference"
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "InvalidSink",
+											"type": "DatasetReference"
+										}
+									]
+								}
+							],
+							"ifTrueActivities": [
+								{
+									"name": "Get Config",
+									"type": "Lookup",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"sqlReaderQuery": {
+												"value": "@concat('select ConditionalValue from dbo.DataValidationConfig where tablename = ''',pipeline().parameters.FileName,'''')",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"dataset": {
+											"referenceName": "SqlServerTable1",
+											"type": "DatasetReference"
+										}
+									}
+								},
+								{
+									"name": "DataFlowValidation",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [
+										{
+											"activity": "Get Config",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "DataFlowValidation",
+											"type": "DataFlowReference",
+											"parameters": {
+												"Condition_1": {
+													"value": "@activity('Get Config').output.firstRow.ConditionalValue",
+													"type": "Expression"
+												},
+												"Source_Name": {
+													"value": "'@{pipeline().parameters.FileName}'",
+													"type": "Expression"
+												},
+												"variables_1": {
+													"value": "'@{variables('check false')}'",
+													"type": "Expression"
+												}
+											}
+										},
+										"compute": {
+											"coreCount": 8,
+											"computeType": "General"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						}
+					}
+				],
+				"parameters": {
+					"FileName": {
+						"type": "string",
+						"defaultValue": "Sales"
+					}
+				},
+				"variables": {
+					"FileCount": {
+						"type": "String",
+						"defaultValue": "0"
+					},
+					"FileName": {
+						"type": "String"
+					},
+					"Iteration": {
+						"type": "String",
+						"defaultValue": "0"
+					},
+					"Iteration Index": {
+						"type": "String",
+						"defaultValue": "0"
+					},
+					"Count Index": {
+						"type": "String",
+						"defaultValue": "0"
+					},
+					"finalcount": {
+						"type": "String"
+					},
+					"ValidCount": {
+						"type": "String"
+					},
+					"check True": {
+						"type": "String",
+						"defaultValue": "0"
+					},
+					"check false": {
+						"type": "String",
+						"defaultValue": "0"
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2021-01-30T17:59:57Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/DF_Inputfile_flag')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ValidCount')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Copy data1",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "SqlServerSink"
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": false,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "DF_Inputfile_flag",
+								"type": "DatasetReference"
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "SqlServerTable1",
+								"type": "DatasetReference"
+							}
+						]
+					},
+					{
+						"name": "Lookup1",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "Copy data1",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlServerSource",
+								"sqlReaderQuery": "select  RowC from dbo.FileCount where TableName = 'Sales'",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "SqlServerTable1",
+								"type": "DatasetReference"
+							}
+						}
+					},
+					{
+						"name": "Execute FileCount",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "Lookup1",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "FileCountValidation",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true
+						}
+					},
+					{
+						"name": "Set variable1",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Execute FileCount",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "ValidCountP",
+							"value": {
+								"value": "@string(int(activity('Lookup1').output.firstRow.RowC))",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Set variable2",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Set variable1",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "ValidCountP",
+							"value": {
+								"value": "@variables('FileCountP')",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"variables": {
+					"ValidCountP": {
+						"type": "String",
+						"defaultValue": "0"
+					},
+					"FileCountP": {
+						"type": "String",
+						"defaultValue": "0"
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2021-01-30T06:28:28Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/DF_Inputfile_flag')]",
+				"[concat(variables('factoryId'), '/pipelines/FileCountValidation')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DF_Inputfile_flag')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_Blob_withKeyVault",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"fileName": "Az_Valid_Input_Sample_Flag.csv",
+						"folderPath": "00landing/Sales",
+						"container": "edhpoc"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "Order ID",
+						"type": "String"
+					},
+					{
+						"name": "Order Date",
+						"type": "String"
+					},
+					{
+						"name": "Ship Date",
+						"type": "String"
+					},
+					{
+						"name": "Aging",
+						"type": "String"
+					},
+					{
+						"name": "Ship Mode",
+						"type": "String"
+					},
+					{
+						"name": "Product Category",
+						"type": "String"
+					},
+					{
+						"name": "Product",
+						"type": "String"
+					},
+					{
+						"name": " Sales ",
+						"type": "String"
+					},
+					{
+						"name": "Quantity",
+						"type": "String"
+					},
+					{
+						"name": "Discount",
+						"type": "String"
+					},
+					{
+						"name": " Profit ",
+						"type": "String"
+					},
+					{
+						"name": " Shipping Cost ",
+						"type": "String"
+					},
+					{
+						"name": "Order Priority",
+						"type": "String"
+					},
+					{
+						"name": "Customer ID",
+						"type": "String"
+					},
+					{
+						"name": "Customer Name",
+						"type": "String"
+					},
+					{
+						"name": "Segment",
+						"type": "String"
+					},
+					{
+						"name": "City",
+						"type": "String"
+					},
+					{
+						"name": "State",
+						"type": "String"
+					},
+					{
+						"name": "Country",
+						"type": "String"
+					},
+					{
+						"name": "Region",
+						"type": "String"
+					},
+					{
+						"name": "Months",
+						"type": "String"
+					},
+					{
+						"name": "Number of Shipping Days",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_Blob_withKeyVault')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_Azure_Key')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [
+					"LS_Annotation"
+				],
+				"type": "AzureKeyVault",
+				"typeProperties": {
+					"baseUrl": "https://depockv.vault.azure.net/"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_Blob_withKeyVault')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"connectionString": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "LS_Azure_Key",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "BlobContainerKey"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_Azure_Key')]"
+			]
+		}
+	]
+}

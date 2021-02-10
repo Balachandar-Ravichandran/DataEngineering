@@ -5,6 +5,21 @@
 		"factoryName": {
 			"value": "adfdepoc"
 		},
+		"Ls_ASASL_accountKey": {
+			"value": ""
+		},
+		"SqlServer1_connectionString": {
+			"value": ""
+		},
+		"LS_Azure_Key_properties_typeProperties_baseUrl": {
+			"value": "https://depockv.vault.azure.net/"
+		},
+		"LS_Blob_withKeyVault_properties_typeProperties_connectionString_secretName": {
+			"value": "BlobContainerKey"
+		},
+		"Ls_ASASL_properties_typeProperties_url": {
+			"value": "https://stdepocl.dfs.core.windows.net"
+		},
 		"containerUri": {
 			"value": ""
 		},

@@ -7,6 +7,26 @@
 			"metadata": "Data Factory name",
 			"defaultValue": "adfdepoc"
 		},
+		"Ls_ASASL_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'Ls_ASASL'"
+		},
+		"SqlServer1_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'SqlServer1'"
+		},
+		"LS_Azure_Key_properties_typeProperties_baseUrl": {
+			"type": "string",
+			"defaultValue": "https://depockv.vault.azure.net/"
+		},
+		"LS_Blob_withKeyVault_properties_typeProperties_connectionString_secretName": {
+			"type": "string",
+			"defaultValue": "BlobContainerKey"
+		},
+		"Ls_ASASL_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://stdepocl.dfs.core.windows.net"
+		},
 		"containerUri": {
 			"type": "string",
 			"metadata": "URI to storage account containing linked ARM templates"
@@ -33,10 +53,45 @@
 				"parameters": {
 					"factoryName": {
 						"value": "[parameters('factoryName')]"
+					},
+					"Ls_ASASL_accountKey": {
+						"value": "[parameters('Ls_ASASL_accountKey')]"
+					},
+					"SqlServer1_connectionString": {
+						"value": "[parameters('SqlServer1_connectionString')]"
+					},
+					"LS_Azure_Key_properties_typeProperties_baseUrl": {
+						"value": "[parameters('LS_Azure_Key_properties_typeProperties_baseUrl')]"
+					},
+					"Ls_ASASL_properties_typeProperties_url": {
+						"value": "[parameters('Ls_ASASL_properties_typeProperties_url')]"
+					},
+					"LS_Blob_withKeyVault_properties_typeProperties_connectionString_secretName": {
+						"value": "[parameters('LS_Blob_withKeyVault_properties_typeProperties_connectionString_secretName')]"
 					}
 				}
 			},
 			"dependsOn": []
+		},
+		{
+			"name": "adfdepoc_ArmTemplate_1",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2018-02-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_1.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					}
+				}
+			},
+			"dependsOn": [
+				"[resourceId('Microsoft.Resources/deployments', 'adfdepoc_ArmTemplate_0')]"
+			]
 		}
 	]
 }
