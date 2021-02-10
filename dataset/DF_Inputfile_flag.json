@@ -2,17 +2,17 @@
 	"name": "DF_Inputfile_flag",
 	"properties": {
 		"linkedServiceName": {
-			"referenceName": "Ls_ASASL",
+			"referenceName": "LS_Blob_withKeyVault",
 			"type": "LinkedServiceReference"
 		},
 		"annotations": [],
 		"type": "DelimitedText",
 		"typeProperties": {
 			"location": {
-				"type": "AzureBlobFSLocation",
+				"type": "AzureBlobStorageLocation",
 				"fileName": "Az_Valid_Input_Sample_Flag.csv",
 				"folderPath": "00landing/Sales",
-				"fileSystem": "edhpoc"
+				"container": "edhpoc"
 			},
 			"columnDelimiter": ",",
 			"escapeChar": "\\",
