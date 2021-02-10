@@ -2,16 +2,16 @@
 	"name": "LandingInputfiles",
 	"properties": {
 		"linkedServiceName": {
-			"referenceName": "Ls_ASASL",
+			"referenceName": "LS_Blob_withKeyVault",
 			"type": "LinkedServiceReference"
 		},
 		"annotations": [],
 		"type": "DelimitedText",
 		"typeProperties": {
 			"location": {
-				"type": "AzureBlobFSLocation",
+				"type": "AzureBlobStorageLocation",
 				"folderPath": "00landing/Sales",
-				"fileSystem": "edhpoc"
+				"container": "edhpoc"
 			},
 			"columnDelimiter": ",",
 			"escapeChar": "\\",
